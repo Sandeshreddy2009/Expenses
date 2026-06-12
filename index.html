@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Expense Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-main: #2d3748;
+            --text-muted: #718096;
+            --primary: #2b6cb0;
+            --primary-light: #ebf8ff;
+            --accent: #319795;
+            --danger: #e53e3e;
+            --border: #e2e8f0;
+        }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background: var(--bg-color); 
+            padding: 20px; 
+            color: var(--text-main);
+            margin: 0;
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto 25px auto;
+        }
+
+        h2 { margin: 0; font-size: 26px; font-weight: 700; color: var(--text-main); }
+        
+        .api-zone { 
+            max-width: 1200px;
+            margin: 0 auto 30px auto;
+            border: 2px solid #90cdf4; 
+            padding: 20px; 
+            background: var(--card-bg); 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .input-row {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        @media (min-width: 768px) {
+            .input-row { flex-direction: row; }
+        }
+
+        .api-input {
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 14px;
+            color: var(--text-main);
+            outline: none;
+            flex: 1;
+        }
+
+        .fetch-btn {
+            background: var(--primary);
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .fetch-btn:hover { background: #1d4ed8; }
+        .status-msg { margin: 0; font-size: 13px; font-weight: 500; }
+
+        .grid { 
+            display: grid; 
+            grid-template-columns: 1fr; 
+            gap: 25px; 
+            max-width: 1200px; 
+            margin: 0 auto; 
+        }
+
+        @media (min-width: 768px) {
+            .grid { grid-template-columns: 1fr 1fr; }
+            .full { grid-column: span 2; }
+        }
+
+        .card { 
+            background: var(--card-bg); 
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--border);
+            overflow-x: auto;
+        }
+        
+        h3 { margin-top: 0; margin-bottom: 20px; font-size: 18px; font-weight: 600; color: var(--text-main); border-bottom: 2px solid var(--primary-light); padding-bottom: 8px; }
+
+        .metrics-display {
+            display: flex;
+            gap: 20px;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+        .metric-box {
+            background: var(--bg-color);
+            padding: 15px;
+            border-radius: 8px;
+            flex: 1;
+            text-align: center;
+        }
+        .metric-box p { margin: 0; font-size: 13px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; }
+        .metric-box strong { display: block; margin-top: 5px; font-size: 22px; font-weight: 700; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 14px; min-width: 400px; }
+        th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+        th { background: var(--bg-color); font-weight: 600; color: var(--text-main); text-transform: uppercase; font-size: 12px; }
+        
+        .day-header {
+            background: #edf2f7;
+            font-weight: 700;
+            color: #4a5568;
+            padding: 8px 14px;
+            font-size: 13px;
+        }
+
+        .category-container-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+            max-width: 1200px;
+            margin: 25px auto 0 auto;
+        }
+
+        @media (min-width: 768px) {
+            .category-container-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <h2>Financial Analytics Dashboard</h2>
+    </div>
+    
+    <div class="api-zone">
+        <label style="font-weight: 600; color: var(--primary); font-size: 15px;">Google Sheets API Live Sync</label>
+        <div class="input-row">
+            <input type="text" id="spreadsheetId" class="api-input" placeholder="Enter Spreadsheet ID or Paste Complete URL Link...">
+            <button class="fetch-btn" onclick="fetchFromSheetsAPI()">Sync Dashboard</button>
+        </div>
+        <p id="status" class="status-msg" style="color: var(--text-muted);">API Key token statically embedded. Please enter your Spreadsheet ID to sync.</p>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h3>Overview</h3>
+            <div class="metrics-display">
+                <div class="metric-box">
+                    <p>Total Monthly Spend</p>
+                    <strong id="totalSpend" style="color: var(--danger);">₹0.00</strong>
+                </div>
+                <div class="metric-box">
+                    <p>Daily Average Burn</p>
+                    <strong id="dailyAvg" style="color: var(--primary);">₹0.00</strong>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>Category Breakdown Visual</h3>
+            <div style="max-height: 180px; display: flex; justify-content: center;">
+                <canvas id="pieChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card full">
+            <h3>Daily Velocity Trend</h3>
+            <canvas id="lineChart" height="90"></canvas>
+        </div>
+
+        <div class="card full">
+            <h3>Itemized Expenses Registry (Chronological Run)</h3>
+            <table>
+                <thead>
+                    <tr><th>Purpose</th><th>Amount</th><th>Category</th></tr>
+                </thead>
+                <tbody id="expenseTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3>Category Distribution Summary</h3>
+            <table>
+                <thead>
+                    <tr><th>Category</th><th>Total Cumulative Spend</th></tr>
+                </thead>
+                <tbody id="categoryTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3>Frequent Items Tracker</h3>
+            <table>
+                <thead>
+                    <tr><th>Expense Description</th><th>Occurrences</th><th>Combined Value</th></tr>
+                </thead>
+                <tbody id="frequencyTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="categorySpecificTables" class="category-container-grid"></div>
+
+<script>
+    const CONFIG_API_KEY = "AIzaSyBe-j5giTQNbuU8y3DX1Qa4YdhJMR05h9E";
+    let chartInstances = {};
+
+    window.onload = function() {
+        try {
+            const savedId = localStorage.getItem('api_spreadsheet_id_manual');
+            if (savedId) {
+                document.getElementById('spreadsheetId').value = savedId;
+                fetchFromSheetsAPI();
+            }
+        } catch(e) {
+            console.warn("Running locally: LocalStorage disabled for security.");
+        }
+    };
+
+    async function fetchFromSheetsAPI() {
+        let inputId = document.getElementById('spreadsheetId').value.trim();
+        const statusEl = document.getElementById('status');
+
+        if (!inputId) {
+            statusEl.style.color = 'var(--danger)';
+            statusEl.innerText = 'Spreadsheet ID or complete shared URL link is required.';
+            return;
+        }
+
+        let spreadsheetId = inputId;
+        if (inputId.includes('docs.google.com')) {
+            const matches = inputId.match(/\/d\/([a-zA-Z0-9-_]+)/);
+            if (matches && matches[1]) spreadsheetId = matches[1];
+        }
+
+        statusEl.style.color = 'var(--primary)';
+        statusEl.innerText = 'Connecting directly to Google Cloud Sheets Engine...';
+
+        const tabRange = "A4:H150"; 
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(tabRange)}?key=${CONFIG_API_KEY}`;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error?.message || 'API connection rejected.');
+            }
+
+            const data = await response.json();
+            const rows = data.values;
+
+            if (!rows || rows.length === 0) throw new Error('No data lines found inside boundaries (A4:H150).');
+
+            try {
+                localStorage.setItem('api_spreadsheet_id_manual', inputId);
+            } catch(e) {}
+
+            processSheetsData(rows);
+
+            statusEl.style.color = '#2f855a';
+            statusEl.innerText = 'Synchronization absolute. Data tables fully updated.';
+        } catch (error) {
+            console.error(error);
+            statusEl.style.color = 'var(--danger)';
+            statusEl.innerText = `API Operational Failure: ${error.message}`;
+        }
+    }
+
+    function processSheetsData(rows) {
+        let expenses = [];
+        let total = 0;
+        let dailyData = {};
+        let categoryData = {};
+        let frequencyMap = {};
+
+        const dateIdx = 4;
+        const categoryIdx = 5;
+        const purposeIdx = 6;
+        const amountIdx = 7;
+
+        let lastValidDate = "1";
+
+        rows.forEach(row => {
+            while(row.length <= amountIdx) row.push("");
+
+            let dateVal = row[dateIdx] ? row[dateIdx].trim() : '';
+            let parsedCategory = row[categoryIdx] ? row[categoryIdx].trim() : '';
+            let purposeVal = row[purposeIdx] ? row[purposeIdx].trim() : '';
+            let amountText = row[amountIdx] ? row[amountIdx].trim() : '0';
+
+            if (!purposeVal && (!amountText || amountText === '0')) return;
+            if (purposeVal.toLowerCase().includes('total') || dateVal.toLowerCase().includes('total') || purposeVal.toLowerCase().includes('balance')) return;
+
+            if (dateVal !== "") {
+                lastValidDate = dateVal;
+            } else {
+                dateVal = lastValidDate;
+            }
+
+            let amountVal = parseFloat(amountText.replace(/[^0-9.-]+/g, '')) || 0;
+            let assignedCategory = parsedCategory !== "" ? parsedCategory : "Other";
+
+            expenses.push({
+                date: parseInt(dateVal) || lastValidDate,
+                purpose: purposeVal,
+                amount: amountVal,
+                category: assignedCategory
+            });
+
+            total += amountVal;
+            categoryData[assignedCategory] = (categoryData[assignedCategory] || 0) + amountVal;
+            dailyData[dateVal] = (dailyData[dateVal] || 0) + amountVal;
+
+            const normalizedPurpose = purposeVal.toLowerCase().trim();
+            if (!frequencyMap[normalizedPurpose]) {
+                frequencyMap[normalizedPurpose] = { name: purposeVal, count: 0, totalAmount: 0 };
+            }
+            frequencyMap[normalizedPurpose].count += 1;
+            frequencyMap[normalizedPurpose].totalAmount += amountVal;
+        });
+
+        updateDashboardUI(expenses, total, categoryData, dailyData, frequencyMap);
+    }
+
+    function updateDashboardUI(expenses, total, categoryData, dailyData, frequencyMap) {
+        document.getElementById('totalSpend').innerText = '₹' + total.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        const totalDays = Object.keys(dailyData).length || 1;
+        document.getElementById('dailyAvg').innerText = '₹' + (total / totalDays).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        
+        renderItemizedTable(expenses);
+        renderCategoryTable(categoryData);
+        renderFrequencyTable(frequencyMap);
+        renderCategorySpecificTables(expenses, categoryData);
+        renderCharts(categoryData, dailyData);
+    }
+
+    function renderItemizedTable(expenses) {
+        const tbody = document.getElementById('expenseTableBody');
+        tbody.innerHTML = '';
+        expenses.sort((a, b) => (parseInt(a.date) || 0) - (parseInt(b.date) || 0));
+
+        let currentDay = null;
+
+        expenses.forEach(e => {
+            if (e.date !== currentDay) {
+                currentDay = e.date;
+                const headerRow = document.createElement('tr');
+                headerRow.innerHTML = `<td colspan="3" class="day-header">Day ${currentDay}</td>`;
+                tbody.appendChild(headerRow);
+            }
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td style="font-weight: 500;">${e.purpose}</td>
+                <td style="font-weight: 600; color: #4a5568;">₹${e.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                <td><span class="badge" style="background: var(--primary-light); color: var(--primary);">${e.category}</span></td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function renderCategoryTable(categoryData) {
+        document.getElementById('categoryTableBody').innerHTML = Object.keys(categoryData).map(cat => `
+            <tr>
+                <td style="font-weight: 600; color: var(--primary);">${cat}</td>
+                <td style="font-weight: 700;">₹${categoryData[cat].toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+            </tr>
+        `).join('');
+    }
+
+    function renderFrequencyTable(frequencyMap) {
+        const sortedFrequency = Object.values(frequencyMap).sort((a, b) => b.count - a.count);
+        document.getElementById('frequencyTableBody').innerHTML = sortedFrequency.map(item => `
+            <tr>
+                <td style="text-transform: capitalize; font-weight: 500;">${item.name}</td>
+                <td><span class="badge" style="background: var(--primary-light); color: var(--primary);">${item.count}x</span></td>
+                <td style="font-weight: 600; color: var(--danger);">₹${item.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+            </tr>
+        `).join('');
+    }
+
+    function renderCategorySpecificTables(expenses, categoryData) {
+        const container = document.getElementById('categorySpecificTables');
+        container.innerHTML = ''; 
+
+        Object.keys(categoryData).sort().forEach(categoryName => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            
+            const title = document.createElement('h3');
+            title.innerText = `${categoryName} Category Ledger`;
+            card.appendChild(title);
+
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <thead>
+                    <tr><th>Day</th><th>Purpose Description</th><th>Amount</th></tr>
+                </thead>
+                <tbody></tbody>
+            `;
+            const tbody = table.querySelector('tbody');
+
+            const filteredExpenses = expenses.filter(e => e.category === categoryName)
+                                             .sort((a, b) => a.date - b.date);
+
+            filteredExpenses.forEach(e => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="color: var(--text-muted); font-weight: 600;">Day ${e.date}</td>
+                    <td style="font-weight: 500;">${e.purpose}</td>
+                    <td style="font-weight: 700; color: var(--text-main);">₹${e.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            card.appendChild(table);
+            container.appendChild(card);
+        });
+    }
+
+    function renderCharts(categoryData, dailyData) {
+        if (chartInstances.pie) chartInstances.pie.destroy();
+        if (chartInstances.line) chartInstances.line.destroy();
+
+        const pieCtx = document.getElementById('pieChart').getContext('2d');
+        chartInstances.pie = new Chart(pieCtx, {
+            type: 'pie',
+            data: {
+                labels: Object.keys(categoryData),
+                datasets: [{ data: Object.values(categoryData), backgroundColor: ['#4299e1', '#319795', '#ed8936', '#ecc94b', '#a0aec0', '#9f7aea', '#ed64a6'] }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+        });
+
+        const sortedDays = Object.keys(dailyData).sort((a, b) => parseInt(a) - parseInt(b));
+        const lineCtx = document.getElementById('lineChart').getContext('2d');
+        chartInstances.line = new Chart(lineCtx, {
+            type: 'line',
+            data: {
+                labels: sortedDays.map(d => "Day " + d),
+                datasets: [{
+                    label: 'Daily Velocity',
+                    data: sortedDays.map(d => dailyData[d]),
+                    borderColor: '#3182ce',
+                    backgroundColor: 'rgba(49, 130, 206, 0.06)',
+                    tension: 0.15,
+                    fill: true
+                }]
+            },
+            options: { responsive: true, scales: { y: { beginAtZero: true } } }
+        });
+    }
+</script>
+</body>
+</html>
