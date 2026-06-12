@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Personal Expense Analytics</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -20,7 +21,7 @@
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             background: var(--bg-color); 
-            padding: 30px; 
+            padding: 20px; 
             color: var(--text-main);
             margin: 0;
         }
@@ -28,18 +29,15 @@
         .header-container {
             max-width: 1200px;
             margin: 0 auto 25px auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
 
-        h2 { margin: 0; font-size: 28px; font-weight: 700; color: var(--text-main); }
+        h2 { margin: 0; font-size: 26px; font-weight: 700; color: var(--text-main); }
         
         .api-zone { 
             max-width: 1200px;
             margin: 0 auto 30px auto;
             border: 2px solid #90cdf4; 
-            padding: 25px; 
+            padding: 20px; 
             background: var(--card-bg); 
             border-radius: 12px; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.02);
@@ -50,7 +48,12 @@
 
         .input-row {
             display: flex;
+            flex-direction: column;
             gap: 10px;
+        }
+
+        @media (min-width: 768px) {
+            .input-row { flex-direction: row; }
         }
 
         .api-input {
@@ -60,11 +63,8 @@
             font-size: 14px;
             color: var(--text-main);
             outline: none;
-            transition: border-color 0.2s;
+            flex: 1;
         }
-
-        #spreadsheetId { flex: 2; }
-        #apiKey { flex: 1; }
 
         .fetch-btn {
             background: var(--primary);
@@ -77,22 +77,20 @@
             transition: background 0.2s;
         }
 
-        .fetch-btn:hover {
-            background: #1d4ed8;
-        }
-
-        .status-msg {
-            margin: 0;
-            font-size: 13px;
-            font-weight: 500;
-        }
+        .fetch-btn:hover { background: #1d4ed8; }
+        .status-msg { margin: 0; font-size: 13px; font-weight: 500; }
 
         .grid { 
             display: grid; 
-            grid-template-columns: 1fr 1fr; 
+            grid-template-columns: 1fr; 
             gap: 25px; 
             max-width: 1200px; 
             margin: 0 auto; 
+        }
+
+        @media (min-width: 768px) {
+            .grid { grid-template-columns: 1fr 1fr; }
+            .full { grid-column: span 2; }
         }
 
         .card { 
@@ -101,8 +99,8 @@
             border-radius: 12px; 
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
             border: 1px solid var(--border);
+            overflow-x: auto;
         }
-        .full { grid-column: span 2; }
         
         h3 { margin-top: 0; margin-bottom: 20px; font-size: 18px; font-weight: 600; color: var(--text-main); border-bottom: 2px solid var(--primary-light); padding-bottom: 8px; }
 
@@ -122,9 +120,9 @@
         .metric-box p { margin: 0; font-size: 13px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; }
         .metric-box strong { display: block; margin-top: 5px; font-size: 22px; font-weight: 700; }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 14px; min-width: 400px; }
         th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); }
-        th { background: var(--bg-color); font-weight: 600; color: var(--text-main); text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
+        th { background: var(--bg-color); font-weight: 600; color: var(--text-main); text-transform: uppercase; font-size: 12px; }
         
         .day-header {
             background: #edf2f7;
@@ -134,16 +132,18 @@
             font-size: 13px;
         }
 
-        select { 
-            padding: 6px 10px; 
-            border-radius: 6px; 
-            border: 1px solid var(--border); 
-            background: var(--card-bg); 
-            color: var(--text-main);
-            font-size: 13px;
-            cursor: pointer;
+        .category-container-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+            max-width: 1200px;
+            margin: 25px auto 0 auto;
         }
-        
+
+        @media (min-width: 768px) {
+            .category-container-grid { grid-template-columns: 1fr 1fr; }
+        }
+
         .badge {
             display: inline-block;
             padding: 4px 8px;
@@ -160,13 +160,12 @@
     </div>
     
     <div class="api-zone">
-        <label style="font-weight: 600; color: var(--primary); font-size: 15px;">Google Sheets API Direct Sync</label>
+        <label style="font-weight: 600; color: var(--primary); font-size: 15px;">Google Sheets API Live Sync</label>
         <div class="input-row">
-            <input type="text" id="spreadsheetId" class="api-input" placeholder="Enter Spreadsheet ID or complete URL...">
-            <input type="password" id="apiKey" class="api-input" placeholder="Enter Cloud API Key...">
-            <button class="fetch-btn" onclick="fetchFromSheetsAPI()">Live API Sync</button>
+            <input type="text" id="spreadsheetId" class="api-input" placeholder="Enter Spreadsheet ID or Paste Complete URL Link...">
+            <button class="fetch-btn" onclick="fetchFromSheetsAPI()">Sync Dashboard</button>
         </div>
-        <p id="status" class="status-msg" style="color: var(--text-muted);">Uses official Google API endpoints. Data is processed entirely in your browser.</p>
+        <p id="status" class="status-msg" style="color: var(--text-muted);">API Key token statically embedded. Please enter your Spreadsheet ID to sync.</p>
     </div>
 
     <div class="grid">
@@ -178,7 +177,7 @@
                     <strong id="totalSpend" style="color: var(--danger);">₹0.00</strong>
                 </div>
                 <div class="metric-box">
-                    <p>Daily Average burn</p>
+                    <p>Daily Average Burn</p>
                     <strong id="dailyAvg" style="color: var(--primary);">₹0.00</strong>
                 </div>
             </div>
@@ -197,109 +196,100 @@
         </div>
 
         <div class="card full">
-            <h3>Itemized Expenses Registry</h3>
-            <table id="expenseTable">
+            <h3>Itemized Expenses Registry (Chronological Run)</h3>
+            <table>
                 <thead>
-                    <tr><th>Purpose</th><th>Amount</th><th>Category Tag</th></tr>
+                    <tr><th>Purpose</th><th>Amount</th><th>Category</th></tr>
                 </thead>
-                <tbody></tbody>
+                <tbody id="expenseTableBody"></tbody>
             </table>
         </div>
 
         <div class="card">
-            <h3>Category Distribution Values</h3>
-            <table id="categoryTable">
+            <h3>Category Distribution Summary</h3>
+            <table>
                 <thead>
                     <tr><th>Category</th><th>Total Cumulative Spend</th></tr>
                 </thead>
-                <tbody></tbody>
+                <tbody id="categoryTableBody"></tbody>
             </table>
         </div>
 
         <div class="card">
-            <h3>Frequent Items Frequency Tracker</h3>
-            <table id="frequencyTable">
+            <h3>Frequent Items Tracker</h3>
+            <table>
                 <thead>
-                    <tr><th>Expense Description (Purpose)</th><th>Occurrences</th><th>Combined Value</th></tr>
+                    <tr><th>Expense Description</th><th>Occurrences</th><th>Combined Value</th></tr>
                 </thead>
-                <tbody></tbody>
+                <tbody id="frequencyTableBody"></tbody>
             </table>
         </div>
     </div>
 
-<script>
-    const keywordMap = {
-        'lunch': 'Food', 'dinner': 'Food', 'snacks': 'Food', 'drinks': 'Food', 'tiffin': 'Food', 'curries': 'Food', 'zomato': 'Food', 'biryani': 'Food', 'haleem': 'Food', 'idli': 'Food', 'dosa': 'Food',
-        'bus': 'Transport', 'petrol': 'Transport', 'rapido': 'Transport', 'uber': 'Transport', 'auto': 'Transport', 'metro': 'Transport',
-        'printout': 'Studies', 'stationery': 'Studies', 'book': 'Studies', 'iquanta': 'Studies', 'ipmat': 'Studies', 'course': 'Studies',
-        'groceries': 'Household', 'clothes': 'Household', 'rent': 'Household'
-    };
+    <div id="categorySpecificTables" class="category-container-grid"></div>
 
+<script>
+    const CONFIG_API_KEY = "AIzaSyBe-j5giTQNbuU8y3DX1Qa4YdhJMR05h9E";
     let chartInstances = {};
 
     window.onload = function() {
-        const savedId = localStorage.getItem('api_spreadsheet_id');
-        const savedKey = localStorage.getItem('api_cloud_key');
-        if (savedId) document.getElementById('spreadsheetId').value = savedId;
-        if (savedKey) document.getElementById('apiKey').value = savedKey;
-        
-        if (savedId && savedKey) {
-            fetchFromSheetsAPI();
+        try {
+            const savedId = localStorage.getItem('api_spreadsheet_id_manual');
+            if (savedId) {
+                document.getElementById('spreadsheetId').value = savedId;
+                fetchFromSheetsAPI();
+            }
+        } catch(e) {
+            console.warn("Running locally: LocalStorage disabled for security.");
         }
     };
 
     async function fetchFromSheetsAPI() {
         let inputId = document.getElementById('spreadsheetId').value.trim();
-        const apiKey = document.getElementById('apiKey').value.trim();
         const statusEl = document.getElementById('status');
 
-        if (!inputId || !apiKey) {
+        if (!inputId) {
             statusEl.style.color = 'var(--danger)';
-            statusEl.innerText = 'Both Spreadsheet ID/URL and API Key are required fields.';
+            statusEl.innerText = 'Spreadsheet ID or complete shared URL link is required.';
             return;
         }
 
-        // Parse ID if user pasted full URL string
         let spreadsheetId = inputId;
         if (inputId.includes('docs.google.com')) {
             const matches = inputId.match(/\/d\/([a-zA-Z0-9-_]+)/);
-            if (matches && matches[1]) {
-                spreadsheetId = matches[1];
-            }
+            if (matches && matches[1]) spreadsheetId = matches[1];
         }
 
         statusEl.style.color = 'var(--primary)';
-        statusEl.innerText = 'Connecting directly to Google API endpoints...';
+        statusEl.innerText = 'Connecting directly to Google Cloud Sheets Engine...';
 
-        // Read columns A to H down to row 100
-        const tabRange = "A4:H100"; 
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(tabRange)}?key=${apiKey}`;
+        const tabRange = "A4:H150"; 
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(tabRange)}?key=${CONFIG_API_KEY}`;
 
         try {
             const response = await fetch(url);
             if (!response.ok) {
                 const errData = await response.json();
-                throw new Error(errData.error?.message || 'API request rejected.');
+                throw new Error(errData.error?.message || 'API connection rejected.');
             }
 
             const data = await response.json();
             const rows = data.values;
 
-            if (!rows || rows.length === 0) {
-                throw new Error('No structural data values found in the target range.');
-            }
+            if (!rows || rows.length === 0) throw new Error('No data lines found inside boundaries (A4:H150).');
 
-            localStorage.setItem('api_spreadsheet_id', inputId);
-            localStorage.setItem('api_cloud_key', apiKey);
+            try {
+                localStorage.setItem('api_spreadsheet_id_manual', inputId);
+            } catch(e) {}
 
             processSheetsData(rows);
 
             statusEl.style.color = '#2f855a';
-            statusEl.innerText = 'Direct sync successful! Local metrics cache refreshed.';
+            statusEl.innerText = 'Synchronization absolute. Data tables fully updated.';
         } catch (error) {
             console.error(error);
             statusEl.style.color = 'var(--danger)';
-            statusEl.innerText = `API Fetch Failure: ${error.message}`;
+            statusEl.innerText = `API Operational Failure: ${error.message}`;
         }
     }
 
@@ -310,23 +300,22 @@
         let categoryData = {};
         let frequencyMap = {};
 
-        // Hardcoded sheet array map layout targets:
-        // Column E (Idx 4) -> Date, Column G (Idx 6) -> Purpose, Column H (Idx 7) -> Amount
         const dateIdx = 4;
+        const categoryIdx = 5;
         const purposeIdx = 6;
         const amountIdx = 7;
 
         let lastValidDate = "1";
 
         rows.forEach(row => {
-            // Fill array padding lengths if line ends early
             while(row.length <= amountIdx) row.push("");
 
             let dateVal = row[dateIdx] ? row[dateIdx].trim() : '';
+            let parsedCategory = row[categoryIdx] ? row[categoryIdx].trim() : '';
             let purposeVal = row[purposeIdx] ? row[purposeIdx].trim() : '';
             let amountText = row[amountIdx] ? row[amountIdx].trim() : '0';
 
-            if (!purposeVal && (amountText === '0' || !amountText)) return;
+            if (!purposeVal && (!amountText || amountText === '0')) return;
             if (purposeVal.toLowerCase().includes('total') || dateVal.toLowerCase().includes('total') || purposeVal.toLowerCase().includes('balance')) return;
 
             if (dateVal !== "") {
@@ -336,14 +325,7 @@
             }
 
             let amountVal = parseFloat(amountText.replace(/[^0-9.-]+/g, '')) || 0;
-
-            let assignedCategory = "Other";
-            for (let key in keywordMap) {
-                if (purposeVal.toLowerCase().includes(key)) {
-                    assignedCategory = keywordMap[key];
-                    break;
-                }
-            }
+            let assignedCategory = parsedCategory !== "" ? parsedCategory : "Other";
 
             expenses.push({
                 date: parseInt(dateVal) || lastValidDate,
@@ -369,20 +351,19 @@
 
     function updateDashboardUI(expenses, total, categoryData, dailyData, frequencyMap) {
         document.getElementById('totalSpend').innerText = '₹' + total.toLocaleString('en-IN', { minimumFractionDigits: 2 });
-        
         const totalDays = Object.keys(dailyData).length || 1;
         document.getElementById('dailyAvg').innerText = '₹' + (total / totalDays).toLocaleString('en-IN', { minimumFractionDigits: 2 });
         
         renderItemizedTable(expenses);
         renderCategoryTable(categoryData);
         renderFrequencyTable(frequencyMap);
+        renderCategorySpecificTables(expenses, categoryData);
         renderCharts(categoryData, dailyData);
     }
 
     function renderItemizedTable(expenses) {
-        const tbody = document.querySelector('#expenseTable tbody');
+        const tbody = document.getElementById('expenseTableBody');
         tbody.innerHTML = '';
-
         expenses.sort((a, b) => (parseInt(a.date) || 0) - (parseInt(b.date) || 0));
 
         let currentDay = null;
@@ -399,21 +380,14 @@
             row.innerHTML = `
                 <td style="font-weight: 500;">${e.purpose}</td>
                 <td style="font-weight: 600; color: #4a5568;">₹${e.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                <td><select>
-                    <option ${e.category === 'Food' ? 'selected' : ''}>Food</option>
-                    <option ${e.category === 'Transport' ? 'selected' : ''}>Transport</option>
-                    <option ${e.category === 'Studies' ? 'selected' : ''}>Studies</option>
-                    <option ${e.category === 'Household' ? 'selected' : ''}>Household</option>
-                    <option ${e.category === 'Other' ? 'selected' : ''}>Other</option>
-                </select></td>
+                <td><span class="badge" style="background: var(--primary-light); color: var(--primary);">${e.category}</span></td>
             `;
             tbody.appendChild(row);
         });
     }
 
     function renderCategoryTable(categoryData) {
-        const tbody = document.querySelector('#categoryTable tbody');
-        tbody.innerHTML = Object.keys(categoryData).map(cat => `
+        document.getElementById('categoryTableBody').innerHTML = Object.keys(categoryData).map(cat => `
             <tr>
                 <td style="font-weight: 600; color: var(--primary);">${cat}</td>
                 <td style="font-weight: 700;">₹${categoryData[cat].toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
@@ -422,16 +396,53 @@
     }
 
     function renderFrequencyTable(frequencyMap) {
-        const tbody = document.querySelector('#frequencyTable tbody');
         const sortedFrequency = Object.values(frequencyMap).sort((a, b) => b.count - a.count);
-
-        tbody.innerHTML = sortedFrequency.map(item => `
+        document.getElementById('frequencyTableBody').innerHTML = sortedFrequency.map(item => `
             <tr>
                 <td style="text-transform: capitalize; font-weight: 500;">${item.name}</td>
                 <td><span class="badge" style="background: var(--primary-light); color: var(--primary);">${item.count}x</span></td>
                 <td style="font-weight: 600; color: var(--danger);">₹${item.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
             </tr>
         `).join('');
+    }
+
+    function renderCategorySpecificTables(expenses, categoryData) {
+        const container = document.getElementById('categorySpecificTables');
+        container.innerHTML = ''; 
+
+        Object.keys(categoryData).sort().forEach(categoryName => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            
+            const title = document.createElement('h3');
+            title.innerText = `${categoryName} Category Ledger`;
+            card.appendChild(title);
+
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <thead>
+                    <tr><th>Day</th><th>Purpose Description</th><th>Amount</th></tr>
+                </thead>
+                <tbody></tbody>
+            `;
+            const tbody = table.querySelector('tbody');
+
+            const filteredExpenses = expenses.filter(e => e.category === categoryName)
+                                             .sort((a, b) => a.date - b.date);
+
+            filteredExpenses.forEach(e => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="color: var(--text-muted); font-weight: 600;">Day ${e.date}</td>
+                    <td style="font-weight: 500;">${e.purpose}</td>
+                    <td style="font-weight: 700; color: var(--text-main);">₹${e.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            card.appendChild(table);
+            container.appendChild(card);
+        });
     }
 
     function renderCharts(categoryData, dailyData) {
@@ -443,10 +454,7 @@
             type: 'pie',
             data: {
                 labels: Object.keys(categoryData),
-                datasets: [{
-                    data: Object.values(categoryData),
-                    backgroundColor: ['#4299e1', '#319795', '#ed8936', '#ecc94b', '#a0aec0']
-                }]
+                datasets: [{ data: Object.values(categoryData), backgroundColor: ['#4299e1', '#319795', '#ed8936', '#ecc94b', '#a0aec0', '#9f7aea', '#ed64a6'] }]
             },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
         });
@@ -458,7 +466,7 @@
             data: {
                 labels: sortedDays.map(d => "Day " + d),
                 datasets: [{
-                    label: 'Daily Transaction Load Value',
+                    label: 'Daily Velocity',
                     data: sortedDays.map(d => dailyData[d]),
                     borderColor: '#3182ce',
                     backgroundColor: 'rgba(49, 130, 206, 0.06)',
