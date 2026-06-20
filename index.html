@@ -50,13 +50,14 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            margin-bottom: 5px;
         }
 
         @media (min-width: 768px) {
             .input-row { flex-direction: row; }
         }
 
-        .api-input {
+        .api-input, .api-select {
             padding: 12px 16px;
             border-radius: 8px;
             border: 1px solid var(--border);
@@ -64,6 +65,7 @@
             color: var(--text-main);
             outline: none;
             flex: 1;
+            background: #ffffff;
         }
 
         .fetch-btn {
@@ -160,12 +162,21 @@
     </div>
     
     <div class="api-zone">
-        <label style="font-weight: 600; color: var(--primary); font-size: 15px;">Google Sheets API Live Sync</label>
+        <label style="font-weight: 600; color: var(--primary); font-size: 15px;">Select Active Expense Sheet</label>
+        
+        <div class="input-row">
+            <select id="sheetDropdown" class="api-select" onchange="handleDropdownSelection()">
+                <option value="">Searching for files containing "Expenses"...</option>
+            </select>
+        </div>
+
+        <div style="text-align: center; color: var(--text-muted); font-size: 12px; font-weight: 600; margin: 2px 0;">— OR MANUALLY SYNC LINK —</div>
+
         <div class="input-row">
             <input type="text" id="spreadsheetId" class="api-input" placeholder="Enter Spreadsheet ID or Paste Complete URL Link...">
             <button class="fetch-btn" onclick="fetchFromSheetsAPI()">Sync Dashboard</button>
         </div>
-        <p id="status" class="status-msg" style="color: var(--text-muted);">API Key token statically embedded. Please enter your Spreadsheet ID to sync.</p>
+        <p id="status" class="status-msg" style="color: var(--text-muted);">API Key token statically embedded. Initializing asset workspace...</p>
     </div>
 
     <div class="grid">
@@ -233,6 +244,10 @@
     let chartInstances = {};
 
     window.onload = function() {
+        // Step 1: Scan Drive immediately to discover sheets containing "Expenses"
+        discoverExpenseSheets();
+
+        // Step 2: Look for an existing cached choice
         try {
             const savedId = localStorage.getItem('api_spreadsheet_id_manual');
             if (savedId) {
@@ -243,6 +258,55 @@
             console.warn("Running locally: LocalStorage disabled for security.");
         }
     };
+
+    // Scans your Google Drive using the embedded API key for any spreadsheets with "Expenses" in the title
+    async function discoverExpenseSheets() {
+        const dropdown = document.getElementById('sheetDropdown');
+        const statusEl = document.getElementById('status');
+        
+        // Query looking for spreadsheets where name contains 'Expenses' and are not trashed
+        const query = encodeURIComponent("mimeType='application/vnd.google-apps.spreadsheet' and name contains 'Expenses' and trashed = false");
+        const driveUrl = `https://www.googleapis.com/drive/v3/files?q=${query}&key=${CONFIG_API_KEY}&fields=files(id,name)`;
+
+        try {
+            const response = await fetch(driveUrl);
+            if (!response.ok) throw new Error("Drive index search unreachable.");
+            
+            const data = await response.json();
+            
+            if (!data.files || data.files.length === 0) {
+                dropdown.innerHTML = '<option value="">No sheets found matching "Expenses"</option>';
+                return;
+            }
+
+            dropdown.innerHTML = '<option value="">-- Choose a detected Expense Spreadsheet --</option>';
+            data.files.forEach(file => {
+                const option = document.createElement('option');
+                option.value = file.id;
+                option.text = file.name;
+                dropdown.appendChild(option);
+            });
+
+            // Automatically visually highlight the dropdown if it matches what was loaded previously
+            const currentActiveId = document.getElementById('spreadsheetId').value.trim();
+            if (currentActiveId) {
+                dropdown.value = currentActiveId;
+            }
+
+        } catch (error) {
+            console.error("Drive scan failure:", error);
+            dropdown.innerHTML = '<option value="">Unable to load automated sheets discovery menu</option>';
+        }
+    }
+
+    // Runs immediately when a choice is picked from the dropdown menu
+    function handleDropdownSelection() {
+        const dropdown = document.getElementById('sheetDropdown');
+        if (dropdown.value) {
+            document.getElementById('spreadsheetId').value = dropdown.value;
+            fetchFromSheetsAPI();
+        }
+    }
 
     async function fetchFromSheetsAPI() {
         let inputId = document.getElementById('spreadsheetId').value.trim();
@@ -280,6 +344,8 @@
 
             try {
                 localStorage.setItem('api_spreadsheet_id_manual', inputId);
+                // Sync matching dropdown state
+                document.getElementById('sheetDropdown').value = spreadsheetId;
             } catch(e) {}
 
             processSheetsData(rows);
